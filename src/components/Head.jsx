@@ -1,32 +1,45 @@
 import React, { useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { toggleMenu } from "../utilites/appSlice";
 import { YOUTUBE_SEARCH_API_KEY } from "../utilites/constant";
+import { casheResults } from "../utilites/searchSlice";
 
 const Head = () => {
-  const [searchQuery,setSearchQuery] = useState("")
-  const [suggestions,setSuggestions] = useState([])
-  const [showSuggestion, setShowSuggestion] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestion, setShowSuggestion] = useState(false);
   const dispatch = useDispatch();
   const toggleMenuHandler = () => {
     dispatch(toggleMenu());
   };
+  const searchCashe = useSelector((state) => state.search);
   useEffect(() => {
     //API Call
-   const timer = setTimeout(() => getSearchSugsesstions(),200)
-   //make an api call after every ket press
-   // but if the diffrence between 2 api calls is <200ms
-   // decline the API call
-   return () => {
+    const timer = setTimeout(() => {
+      if (searchCashe[searchQuery]) {
+        setSuggestions(searchCashe[searchQuery]);
+      } else {
+        getSearchSugsesstions(), 200;
+      }
+    });
+    //make an api call after every ket press
+    // but if the diffrence between 2 api calls is <200ms
+    // decline the API call
+    return () => {
       clearTimeout(timer);
-   }
-  },[searchQuery]);
-  const getSearchSugsesstions = async() => {
+    };
+  }, [searchQuery]);
+  const getSearchSugsesstions = async () => {
     const data = await fetch(YOUTUBE_SEARCH_API_KEY + searchQuery);
     const json = await data.json();
     //console.log(json);
-    setSuggestions(json[1])
-  }
+    setSuggestions(json[1]);
+    dispatch(
+      casheResults({
+        [searchQuery]: json[1],
+      })
+    );
+  };
   return (
     <div className="grid grid-flow-col p-5 m-2 shadow-lg">
       <div className="flex col-span-1">
@@ -43,29 +56,34 @@ const Head = () => {
         />
       </div>
       <div className="col-span-10 px-10">
-      <div>
-        <input
-          className="px-5 w-1/2 border border-gray-400 p-2 rounded-l-full"
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onFocus={() => setShowSuggestion(true)}
-          onBlur={() => setShowSuggestion(false)}
-        />
-        <button className="border border-gray-400 p-2 rounded-r-full bg-gray-100">
-          search
-        </button>
+        <div>
+          <input
+            className="px-5 w-1/2 border border-gray-400 p-2 rounded-l-full"
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => setShowSuggestion(true)}
+            onBlur={() => setShowSuggestion(false)}
+          />
+          <button className="border border-gray-400 p-2 rounded-r-full bg-gray-100">
+            search
+          </button>
         </div>
-       {showSuggestion && <div className="fixed top-[70px] bg-white py-2 px-2 w-[42rem] shadow-lg rounded-lg border border-gray-100">
+        {showSuggestion && (
+          <div className="fixed top-[70px] bg-white py-2 px-2 w-[42rem] shadow-lg rounded-lg border border-gray-100">
             <ul>
-            {
-              suggestions && suggestions.map((suggestion) => (
-                <li className="py-2 px-3 shadow-sm hover:bg-gray-100" key={suggestion}>&#128269; {suggestion}</li>
-              ))
-            }
-              
+              {suggestions &&
+                suggestions.map((suggestion) => (
+                  <li
+                    className="py-2 px-3 shadow-sm hover:bg-gray-100"
+                    key={suggestion}
+                  >
+                    &#128269; {suggestion}
+                  </li>
+                ))}
             </ul>
-        </div>}
+          </div>
+        )}
       </div>
       <div className="col-span-1">
         <img
